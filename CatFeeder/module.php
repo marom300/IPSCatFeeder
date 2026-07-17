@@ -327,6 +327,12 @@ class CatFeeder extends IPSModule
     // ================= Fremde Tags =================
     private function onUnknown(string $tag): void
     {
+        // Rausch-Lesungen des RDM6300: komplett genullte Frames bestehen die
+        // XOR-Pruefung (0^0=0); echte EM4100-Tags sind nie 0000000000.
+        if ($tag === '' || $tag === '0000000000') {
+            $this->SendDebug('RFID', 'Rausch-Frame verworfen: ' . $tag, 0);
+            return;
+        }
         $this->SetValue('LastUnknownTag', $tag);
         $this->SetValue('UnknownToday', $this->GetValue('UnknownToday') + 1);
         $thieves = json_decode($this->ReadAttributeString('Thieves'), true) ?: [];

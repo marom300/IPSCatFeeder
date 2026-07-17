@@ -120,13 +120,17 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
   main { grid-template-columns: 1fr 1fr;
     grid-template-areas: "c1 c2" "feeder thief" "time time"; }
 }
-/* 3 Spalten schon ab 860px — auch wenn das WebFront-Menü die Box unter 1100px drückt */
+/* 3 Spalten schon ab 860px — auch wenn das WebFront-Menü die Box unter 1100px drückt.
+   Zeilenhöhen bleiben hier NATÜRLICH (kein Strecken) — sonst bläht sich der
+   Tagesverlauf bei hohen Fenstern zu einem riesigen leeren Kasten auf.
+   Gestreckt wird nur im No-Scroll-Touch-Modus (Media-Query unten). */
 @media (min-width: 860px) {
   main {
     grid-template-columns: 1fr 1fr 0.92fr;
-    grid-template-rows: auto minmax(0,1fr);
     grid-template-areas: "c1 c2 feeder" "time time thief";
+    align-content: start;   /* Extra-Höhe NICHT auf die Zeilen verteilen */
   }
+  .bars { flex: none; height: clamp(130px, 24vh, 230px); }
 }
 
 /* ══ Katzen-Karte ══ */
@@ -248,6 +252,9 @@ footer .spacer { flex:1; }
   body { height: 100dvh; overflow: hidden; padding: 8px; }
   html { font-size: 11px; }
   :root { --gap: 6px; }
+  /* nur hier (No-Scroll) die Resthöhe auf die zweite Zeile verteilen */
+  main { grid-template-rows: auto minmax(0,1fr); align-content: stretch; }
+  .bars { flex: 1 1 auto; height: auto; }
   .card { padding: 8px 10px; }
   .card-title { font-size: 9px; letter-spacing: 1.4px; margin-bottom: 4px; }
   header { padding: 5px 12px; gap: 8px; }
