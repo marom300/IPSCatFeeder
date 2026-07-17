@@ -116,11 +116,12 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
 #c-cat1 { grid-area: c1; } #c-cat2 { grid-area: c2; }
 #c-feeder { grid-area: feeder; } #c-time { grid-area: time; } #c-thief { grid-area: thief; }
 
-@media (min-width: 720px) and (max-width: 1099px) {
+@media (min-width: 720px) and (max-width: 859px) {
   main { grid-template-columns: 1fr 1fr;
     grid-template-areas: "c1 c2" "feeder thief" "time time"; }
 }
-@media (min-width: 1100px) {
+/* 3 Spalten schon ab 860px — auch wenn das WebFront-Menü die Box unter 1100px drückt */
+@media (min-width: 860px) {
   main {
     grid-template-columns: 1fr 1fr 0.92fr;
     grid-template-rows: auto minmax(0,1fr);
@@ -135,7 +136,8 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
 .cat-body { display: flex; gap: clamp(10px,2.4cqi,20px); align-items: center; flex: 1 1 auto; min-height: 0; }
 
 .ring-wrap { position: relative; flex: none; width: clamp(96px, 30cqi, 150px); aspect-ratio: 1; }
-.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+/* overflow:visible -> der Glow (drop-shadow) wird nicht am SVG-Rand abgeschnitten */
+.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
 .ring-track { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 9; }
 .ring-prog  { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round;
   filter: drop-shadow(0 0 5px var(--accent)); transition: stroke-dashoffset .8s cubic-bezier(.22,1,.36,1), stroke .5s; }
@@ -239,18 +241,35 @@ footer .spacer { flex:1; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius:3px; }
 @media (prefers-reduced-motion: reduce) { .card, header { animation-duration:.01ms !important; } }
 
-/* Touch-Panel (1080p @150% ≈ 1280×600): kein Scrollen */
-@media (min-width: 1100px) { body { height: 100dvh; overflow: hidden; } }
-@media (min-width: 1100px) and (max-height: 840px) {
+/* Touch-Panel (Symcon-WebFront, quer & kurz, z.B. 1080p@150% ≈ 1280×600):
+   kein Scrollen + kompakt. Greift ab 860px Breite UND kurzer Höhe — also auch,
+   wenn das WebFront-Menü die HTML-Box schmaler als 1100px macht. */
+@media (min-width: 860px) and (max-height: 860px) {
+  body { height: 100dvh; overflow: hidden; padding: 8px; }
   html { font-size: 11px; }
-  :root { --gap: 7px; }
-  body { padding: 8px; }
-  .card { padding: 9px 11px; }
-  .card-title { font-size: 9.5px; letter-spacing: 1.6px; margin-bottom: 6px; }
-  header { padding: 5px 12px; }
-  .dev-badge { width: 32px; height: 32px; }
-  .dev-name h1 { font-size: 15px; }
-  .ring-wrap { width: clamp(84px,22cqi,120px); }
+  :root { --gap: 6px; }
+  .card { padding: 8px 10px; }
+  .card-title { font-size: 9px; letter-spacing: 1.4px; margin-bottom: 4px; }
+  header { padding: 5px 12px; gap: 8px; }
+  .dev-badge { width: 30px; height: 30px; }
+  .dev-name h1 { font-size: 14px; }
+  .dev-name .sub { font-size: 9px; letter-spacing: 1px; }
+  .chip, .status-pill { padding: 4px 10px; font-size: 11px; }
+  .ring-wrap { width: clamp(72px, 17cqi, 104px); }
+  .cat-body { gap: 10px; }
+  .cat-meta { gap: 3px; }
+  .cat-name { font-size: clamp(13px,4cqi,17px); }
+  .kv { gap: 3px; }
+  .kv-row { padding-bottom: 2px; }
+  .budget-row { margin-top: 3px; }
+  .budget-row button { width: 22px; height: 22px; }
+  .tank { margin-top: 5px; }
+  .tank-bar { height: clamp(12px,3cqi,16px); }
+  .btn-grid { margin-top: 5px; gap: 5px; }
+  .cmd-btn { min-height: 28px; padding: 5px 3px; }
+  .bars { min-height: 44px; padding-top: 3px; }
+  .legend { margin-top: 5px; }
+  footer { font-size: 9.5px; }
 }
 .hidden { display:none !important; }
 </style>
@@ -379,6 +398,15 @@ footer .spacer { flex:1; }
     <div class="confirm-text" id="confirmText"></div>
     <button class="cancel confirm-yes" id="confirmYes">Ja</button>
     <button class="cancel" id="confirmNo">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Portionen-Auswähler -->
+<div class="overlay" id="portionOverlay">
+  <div class="dlg">
+    <div class="dlg-title">Wie viele Portionen?</div>
+    <div class="pinpad" id="portionPad" style="grid-template-columns:repeat(3,1fr)"></div>
+    <button class="cancel" id="portionCancel">Abbrechen</button>
   </div>
 </div>
 
@@ -572,10 +600,26 @@ async function sendCmd(cmd, value, extra) {
   } catch (e) { toast('Keine Verbindung', true); }
 }
 
+function pickPortion() {
+  return new Promise(resolve => {
+    const ov = $('portionOverlay'), pad = $('portionPad');
+    const g = lastData?.feeder?.portion_g ?? 8;
+    const max = Math.max(1, lastData?.feeder?.max_manual ?? 3);
+    let html = '';
+    for (let n = 1; n <= max; n++) {
+      html += `<button data-n="${n}">${n}<span style="display:block;font-size:.55em;color:var(--text-dim);font-weight:500">${n * g} g</span></button>`;
+    }
+    pad.innerHTML = html;
+    const done = v => { ov.classList.remove('show'); pad.onclick = $('portionCancel').onclick = null; resolve(v); };
+    pad.onclick = e => { const b = e.target.closest('button'); if (b) done(parseInt(b.dataset.n, 10)); };
+    $('portionCancel').onclick = () => done(null);
+    ov.classList.add('show');
+  });
+}
+
 $('btnDispense').addEventListener('click', async () => {
-  if (await askConfirm('Portion ausgeben', 'Jetzt manuell eine Portion (' + (lastData?.feeder?.portion_g ?? 8) + ' g) ausgeben?')) {
-    sendCmd('dispense');
-  }
+  const n = await pickPortion();
+  if (n) sendCmd('dispense', n);
 });
 $('btnPause').addEventListener('click', () => sendCmd('pause', !(lastData?.feeder?.paused)));
 $('btnTank').addEventListener('click', async () => {
@@ -601,7 +645,7 @@ function MOCK_DATA() {
       { name:'Nala', eaten:56, budget:60, visits:8, last_visit: now-3*60,  present:false }
     ],
     feeder: { online:true, bridge_online:true, empty:false, paused:false, last_dispense: now-3*60,
-              portions_today:11, grams_today:88, portion_g:8, tank_g:930, tank_pct:62 },
+              portions_today:11, grams_today:88, portion_g:8, tank_g:930, tank_pct:62, max_manual:3 },
     esp: { online:true, rssi:-58, last_seen: now-30 },
     hourly,
     thieves: [ { tag:'0A00F1C2D3', ts: now-42*60 } ],

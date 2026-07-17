@@ -35,7 +35,7 @@ Tuya-Bridge    --MQTT-->  cats/feeder/device (retained) · bridge (LWT)
 
 | Parameter | Standard | Wirkung |
 |---|---|---|
-| Katzen-Liste | Mia, Nala | Max. 4. **Name muss exakt dem `CAT_TAGS`-Namen in der ESP32-Firmware entsprechen** (Groß-/Kleinschreibung egal). Reihenfolge bestimmt die Variablen-Idents (Cat1…, Cat2…) — nachträgliches Umsortieren vertauscht die Historie! Umbenennen ist ok (Variablennamen ziehen nach). |
+| Katzen-Liste | Mila, Nala | Max. 4. **Name muss exakt dem `CAT_TAGS`-Namen in der ESP32-Firmware entsprechen** (Groß-/Kleinschreibung egal). Reihenfolge bestimmt die Variablen-Idents (Cat1…, Cat2…) — nachträgliches Umsortieren vertauscht die Historie! Umbenennen ist ok (Variablennamen ziehen nach). |
 | Standard-Tagesbudget | 60 g | Vorbelegung der Budget-Variable **bei Neuanlage** einer Katze. Später zählt nur noch die Variable (WebFront/Dashboard änderbar). 0 g = heute nicht füttern. |
 
 ### Fütterung
@@ -80,12 +80,16 @@ Pro Katze: `am Napf`, `gefressen heute`, `Tagesbudget` (bedienbar), `Besuche heu
 
 | Funktion | Wirkung |
 |---|---|
-| `CFD_Dispense(int $id, int $Portionen)` | Manuelle Ausgabe (1–2), zählt auf kein Katzenbudget. |
+| `CFD_Dispense(int $id, int $Portionen)` | Manuelle Ausgabe (1–3 Portionen), zählt auf kein Katzenbudget. Obergrenze `MANUAL_MAX` (3) im Modul; die Bridge begrenzt zusätzlich hart. |
 | `CFD_TankFilled(int $id)` | Tank-Schätzung auf Kapazität zurücksetzen. |
+
+Im Dashboard öffnet der Button **„Portion …"** einen Auswähler für 1–3 Portionen (8/16/24 g).
+Mehr als 3 auf einmal: `MANUAL_MAX` im Modul UND `max_portions_per_cmd` in der Bridge-`config.json`
+erhöhen (danach `restart-service.bat`).
 
 ## Dashboard-API (WebHook)
 
 - `GET  …?action=status` → kompletter Zustand als JSON
 - `GET  …?action=log` → Protokoll-Einträge (Archiv des Fütterungs-Logs)
-- `POST …?action=cmd` `{cmd, value, pin}` → `dispense` · `pause` · `tank_full` · `set_budget` (+`cat`)
+- `POST …?action=cmd` `{cmd, value, pin}` → `dispense` (value = Portionen 1–3) · `pause` · `tank_full` · `set_budget` (+`cat`)
 - ohne `action` → liefert das Dashboard-HTML aus

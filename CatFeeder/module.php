@@ -28,6 +28,7 @@ class CatFeeder extends IPSModule
 
     private const MAX_CATS    = 4;
     private const MAX_THIEVES = 20;
+    private const MANUAL_MAX   = 3;   // max. Portionen pro manueller Ausgabe (Dashboard/Skript)
 
     public function Create()
     {
@@ -36,7 +37,7 @@ class CatFeeder extends IPSModule
         // --- MQTT / Grundkonfiguration ---
         $this->RegisterPropertyString('BaseTopic', 'cats/feeder');
         $this->RegisterPropertyString('Cats', json_encode([
-            ['Name' => 'Mia'],
+            ['Name' => 'Mila'],
             ['Name' => 'Nala']
         ]));
         $this->RegisterPropertyInteger('DefaultBudget', 60);     // g/Tag je Katze
@@ -401,10 +402,11 @@ class CatFeeder extends IPSModule
     }
 
     // ================= Öffentliche Funktionen =================
-    /** Manuelle Portion (Konsole/Dashboard/Skript). Zaehlt NICHT auf ein Katzenbudget. */
+    /** Manuelle Portion(en) (Konsole/Dashboard/Skript). Zaehlt NICHT auf ein Katzenbudget.
+     *  Bis MANUAL_MAX Portionen in einem Kommando — die Bridge begrenzt zusaetzlich hart. */
     public function Dispense(int $Portions)
     {
-        $p = max(1, min(2, $Portions));
+        $p = max(1, min(self::MANUAL_MAX, $Portions));
         $this->publish($this->ReadPropertyString('BaseTopic') . '/cmd/dispense', json_encode(['portions' => $p]), false);
         $portion = $this->ReadPropertyInteger('PortionGrams') * $p;
         $this->SetValue('GramsToday', $this->GetValue('GramsToday') + $portion);
@@ -629,8 +631,9 @@ class CatFeeder extends IPSModule
             try {
                 switch ($cmd) {
                     case 'dispense':
-                        $this->Dispense(1);
-                        $msg = 'Portion angefordert';
+                        $p = max(1, min(self::MANUAL_MAX, (int)($val ?? 1)));
+                        $this->Dispense($p);
+                        $msg = $p . ' Portion(en) angefordert';
                         break;
                     case 'pause':
                         $this->RequestAction('Paused', (bool)$val);
@@ -723,6 +726,7 @@ class CatFeeder extends IPSModule
                 'portions_today'=> $this->GetValue('PortionsToday'),
                 'grams_today'   => $this->GetValue('GramsToday'),
                 'portion_g'     => $this->ReadPropertyInteger('PortionGrams'),
+                'max_manual'    => self::MANUAL_MAX,
                 'tank_g'        => $this->GetValue('TankRemaining'),
                 'tank_pct'      => (int)round($this->GetValue('TankRemaining') / $cap * 100),
             ],
