@@ -1,0 +1,14 @@
+{
+    "id": "{E3C7B2F4-8A15-4D96-B7E3-2F60A9C4D815}",
+    "author": "marom300",
+    "name": "CatFeeder",
+    "title": "RFID Katzenfütterung",
+    "description": "RFID-gesteuerte Katzenfuetterung: ESP32-RFID-Reader am Napf (MQTT) + oneisall-Tuya-Feeder ueber lokale Bridge. Tagesbudget pro Katze, Mikrodosierung, Diebstahl-Erkennung, Dashboard.",
+    "url": "https://github.com/marom300/IPSCatFeeder",
+    "version": "1.0",
+    "build": 1,
+    "date": 0,
+    "compatibility": {
+        "minIPS": "6.0"
+    }
+}

@@ -1,0 +1,104 @@
+{
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "MQTT",
+            "items": [
+                {
+                    "type": "ValidationTextBox",
+                    "name": "BaseTopic",
+                    "caption": "Basis-Topic (muss zu ESP32-Firmware und Bridge passen)"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Katzen",
+            "items": [
+                {
+                    "type": "List",
+                    "name": "Cats",
+                    "caption": "Katzen (Name wie in der ESP32-config.h, max. 4)",
+                    "rowCount": 4,
+                    "add": true,
+                    "delete": true,
+                    "columns": [
+                        {
+                            "caption": "Name",
+                            "name": "Name",
+                            "width": "auto",
+                            "add": "",
+                            "edit": { "type": "ValidationTextBox" }
+                        }
+                    ]
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "DefaultBudget",
+                    "caption": "Standard-Tagesbudget je Katze",
+                    "suffix": " g",
+                    "minimum": 0
+                },
+                {
+                    "type": "Label",
+                    "caption": "Das Budget wird als Variable angelegt und kann dort (oder im Dashboard) jederzeit geändert werden. 0 g = heute nicht füttern."
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Fütterung",
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "PortionGrams",
+                    "caption": "Gramm pro Portion (Phase 0: nachgewogen)",
+                    "suffix": " g",
+                    "minimum": 1
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "FeedIntervalSec",
+                    "caption": "Wiederholintervall solange Katze am Napf",
+                    "suffix": " s",
+                    "minimum": 5
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "TankCapacityG",
+                    "caption": "Tank-Kapazität (für die Restmengen-Schätzung)",
+                    "suffix": " g",
+                    "minimum": 100
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Dashboard & Benachrichtigung",
+            "items": [
+                { "type": "ValidationTextBox", "name": "DashboardTitle", "caption": "Dashboard-Titel" },
+                { "type": "ValidationTextBox", "name": "DashboardSubtitle", "caption": "Dashboard-Untertitel" },
+                { "type": "PasswordTextBox", "name": "PinCode", "caption": "PIN für Dashboard-Steuerung (leer = ohne PIN)" },
+                { "type": "SelectScript", "name": "NotifyScriptID", "caption": "Push-Skript (erhält $_IPS['MESSAGE'])" },
+                { "type": "Label", "caption": "Das Push-Skript wird bei 'Futter leer' und 'Feeder offline' aufgerufen — dort z. B. WFC_PushNotification(...) einbauen." }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "🧪 Testportion ausgeben",
+            "onClick": "CFD_Dispense($id, 1);"
+        },
+        {
+            "type": "Button",
+            "caption": "🪣 Tank wurde aufgefüllt",
+            "onClick": "CFD_TankFilled($id);"
+        },
+        {
+            "type": "Label",
+            "caption": "Dashboard-URL: http://<symcon-ip>:3777/hook/catfeeder<InstanzID>  (für IPSView-HTML-Box / Browser)"
+        }
+    ],
+    "status": []
+}
