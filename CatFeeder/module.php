@@ -718,6 +718,9 @@ class CatFeeder extends IPSModule
 
         $thieves = [];
         foreach (json_decode($this->ReadAttributeString('Thieves'), true) ?: [] as $t) {
+            if ((string)$t[1] === '0000000000') {
+                continue;   // Alt-Einträge aus Rausch-Frames ausblenden
+            }
             $thieves[] = ['ts' => (int)$t[0], 'tag' => (string)$t[1]];
         }
 

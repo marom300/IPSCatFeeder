@@ -139,7 +139,9 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
 .cat .card-title .tdot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .cat-body { display: flex; gap: clamp(10px,2.4cqi,20px); align-items: center; flex: 1 1 auto; min-height: 0; }
 
-.ring-wrap { position: relative; flex: none; width: clamp(96px, 30cqi, 150px); aspect-ratio: 1; }
+/* container-type: der Text im Ring skaliert mit dem RING (cqi unten = Ringbreite),
+   nicht mit der Kartenbreite — sonst sprengt "16 g" auf breiten Karten den Kreis */
+.ring-wrap { position: relative; flex: none; width: clamp(96px, 30cqi, 150px); aspect-ratio: 1; container-type: inline-size; }
 /* overflow:visible -> der Glow (drop-shadow) wird nicht am SVG-Rand abgeschnitten */
 .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
 .ring-track { fill: none; stroke: rgba(255,255,255,.07); stroke-width: 9; }
@@ -148,9 +150,9 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
 .ring-prog.warn { stroke: var(--amber); filter: drop-shadow(0 0 5px var(--amber)); }
 .ring-prog.crit { stroke: var(--red);   filter: drop-shadow(0 0 5px var(--red)); }
 .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.ring-center .big { font-family: var(--mono); font-size: clamp(17px,7cqi,27px); font-weight: 700; line-height: 1; }
-.ring-center .sub { font-size: clamp(9px,3.2cqi,11.5px); color: var(--text-dim); margin-top: 3px; }
-.ring-center .pct { font-size: clamp(9px,3cqi,11px); color: var(--accent); font-weight:700; margin-top:2px; }
+.ring-center .big { font-family: var(--mono); font-size: clamp(13px,18cqi,25px); font-weight: 700; line-height: 1; }
+.ring-center .sub { font-size: clamp(8px,8.5cqi,11px); color: var(--text-dim); margin-top: 3px; }
+.ring-center .pct { font-size: clamp(8px,8cqi,10.5px); color: var(--accent); font-weight:700; margin-top:2px; }
 
 .cat-meta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px,1.6cqi,9px); }
 .cat-name { display:flex; align-items:center; gap:8px; font-size: clamp(15px,4.6cqi,20px); font-weight:700; }
