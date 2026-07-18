@@ -85,6 +85,7 @@ Pausiert / Futter leer / Feeder offline / Bridge offline — grün heißt „all
 |---|---|
 | `CFD_Dispense(int $id, int $Portionen)` | Manuelle Ausgabe (1–3 Portionen), zählt auf kein Katzenbudget und **umgeht das Tageslimit der Bridge** (Minutenlimit/Mindestabstand gelten weiter). Obergrenze `MANUAL_MAX` (3) im Modul. |
 | `CFD_TankFilled(int $id)` | Tank-Schätzung auf Kapazität zurücksetzen. |
+| `CFD_ResetDay(int $id)` | **Test-Reset:** alle Tageszähler (Katzen, Portionen, fremde Tags) UND das Bridge-Tageslimit (`state.json`) zurücksetzen. Für die Testphase gedacht — der nächtliche Auto-Reset um 00:00 bleibt davon unberührt. |
 
 Im Dashboard öffnet der Button **„Portion …"** einen Auswähler für 1–3 Portionen (8/16/24 g).
 Mehr als 3 auf einmal: `MANUAL_MAX` im Modul UND `max_portions_per_cmd` in der Bridge-`config.json`
@@ -94,5 +95,8 @@ erhöhen (danach `restart-service.bat`).
 
 - `GET  …?action=status` → kompletter Zustand als JSON
 - `GET  …?action=log` → Protokoll-Einträge (Archiv des Fütterungs-Logs)
-- `POST …?action=cmd` `{cmd, value, pin}` → `dispense` (value = Portionen 1–3) · `pause` · `tank_full` · `set_budget` (+`cat`)
+- `POST …?action=cmd` `{cmd, value, pin}` → `dispense` (value = Portionen 1–3) · `pause` · `tank_full` · `reset` · `set_budget` (+`cat`)
+
+Das Dashboard zeigt im Footer die laufende Modul-Version (aus der library.json) —
+so ist immer sichtbar, welcher Softwarestand tatsächlich ausgeliefert wird.
 - ohne `action` → liefert das Dashboard-HTML aus

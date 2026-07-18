@@ -411,6 +411,11 @@ class CatFeeder extends IPSModule
             return;
         }
         $this->WriteAttributeString('ResetDate', $today);
+        $this->resetCounters('— Tagesreset —');
+    }
+
+    private function resetCounters(string $logMsg): void
+    {
         foreach ($this->catList() as $i => $cat) {
             $n = $i + 1;
             $this->SetValue("Cat{$n}EatenToday", 0);
@@ -420,7 +425,23 @@ class CatFeeder extends IPSModule
         $this->SetValue('GramsToday', 0);
         $this->SetValue('UnknownToday', 0);
         $this->WriteAttributeString('DayLog', '{}');
-        $this->logFeed('— Tagesreset —');
+        $this->logFeed($logMsg);
+    }
+
+    /** Test-Reset: Modul-Zaehler UND Bridge-Tageslimit zuruecksetzen (Dashboard/Formular). */
+    public function ResetDay()
+    {
+        $this->WriteAttributeString('ResetDate', date('Y-m-d'));
+        $this->resetCounters('🔄 Reset — Zähler und Bridge-Tageslimit zurückgesetzt');
+        // Bridge leert ihre Ausgabe-Zaehler (state.json) und meldet device neu
+        $this->publish($this->ReadPropertyString('BaseTopic') . '/cmd/reset', '{}', false);
+        // Drossel-Status lokal sofort aufheben, die Bridge bestaetigt via device-Topic
+        $this->SetValue('Throttled', false);
+        $this->WriteAttributeBoolean('WasThrottled', false);
+        $this->WriteAttributeString('ThrottleReason', '');
+        $this->WriteAttributeString('Thieves', '[]');
+        $this->SetValue('LastUnknownTag', '');
+        $this->refreshSystemState();
     }
 
     private function armMidnightTimer(): void
@@ -707,6 +728,10 @@ class CatFeeder extends IPSModule
                         $this->TankFilled();
                         $msg = 'Tank-Zähler zurückgesetzt';
                         break;
+                    case 'reset':
+                        $this->ResetDay();
+                        $msg = 'Zähler + Tageslimit zurückgesetzt';
+                        break;
                     case 'set_budget':
                         $idx = (int)($payload['cat'] ?? 0);
                         if ($idx < 1 || $idx > count($this->catList())) {
@@ -808,8 +833,19 @@ class CatFeeder extends IPSModule
             'thieves'      => $thieves,
             'unknown_today'=> $this->GetValue('UnknownToday'),
             'pin_required' => $this->ReadPropertyString('PinCode') !== '',
+            'version'      => $this->moduleVersion(),
             'ts'           => time(),
         ];
+    }
+
+    /** Version/Build aus der library.json — eine Quelle, keine Missverstaendnisse. */
+    private function moduleVersion(): string
+    {
+        $lib = @json_decode((string)@file_get_contents(__DIR__ . '/../library.json'), true);
+        if (!is_array($lib)) {
+            return '';
+        }
+        return 'v' . ($lib['version'] ?? '?') . ' · Build ' . ($lib['build'] ?? '?');
     }
 
     private function buildLogData(): array

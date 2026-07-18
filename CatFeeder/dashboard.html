@@ -186,7 +186,7 @@ main { flex: 1 1 auto; min-height: 0; display: grid; gap: var(--gap);
 .tank-fill { height:100%; border-radius:999px; background: linear-gradient(90deg, rgba(0,212,255,.5), var(--cyan)); box-shadow: 0 0 12px var(--cyan-dim); transition: width .8s cubic-bezier(.22,1,.36,1); }
 .tank-fill.warn { background: linear-gradient(90deg, rgba(255,176,32,.5), var(--amber)); }
 .tank-cap { display:flex; justify-content:space-between; font-size: clamp(9.5px,2.7cqi,11.5px); color: var(--text-faint); margin-top:5px; }
-.btn-grid { display:grid; grid-template-columns: repeat(3,1fr); gap: clamp(5px,1.4cqi,8px); margin-top: clamp(7px,1.8cqi,11px); }
+.btn-grid { display:grid; grid-template-columns: repeat(4,1fr); gap: clamp(4px,1.2cqi,7px); margin-top: clamp(7px,1.8cqi,11px); }
 .cmd-btn {
   appearance:none; border:1px solid var(--glass-border); background: var(--glass-bg-strong); color: var(--text);
   border-radius:10px; padding: clamp(6px,1.8cqi,9px) 4px; min-height:34px;
@@ -363,6 +363,7 @@ footer .spacer { flex:1; }
       <button class="cmd-btn" id="btnDispense">Portion …</button>
       <button class="cmd-btn" id="btnPause">Pause</button>
       <button class="cmd-btn" id="btnTank">Tank voll</button>
+      <button class="cmd-btn" id="btnReset">Reset</button>
     </div>
   </section>
 
@@ -382,7 +383,7 @@ footer .spacer { flex:1; }
   </section>
 </main>
 
-<footer id="footer"><span class="conn-dot"></span><span id="connText">Verbinde …</span><span class="spacer"></span><span id="lastUpdate"></span></footer>
+<footer id="footer"><span class="conn-dot"></span><span id="connText">Verbinde …</span><span class="spacer"></span><span id="verText"></span><span id="lastUpdate"></span></footer>
 <div class="toast" id="toast"></div>
 
 <!-- PIN-Dialog -->
@@ -548,6 +549,7 @@ function render(d) {
     ? t.map(x => `<div class="thief-row"><span class="ic">⚠</span><span class="tg">${x.tag}</span><span class="tt">${rel(x.ts)}</span></div>`).join('')
     : '<div class="thief-empty">✓ Keine fremden Tags erkannt.</div>';
 
+  $('verText').textContent = d.version ? d.version + ' · ' : '';
   $('lastUpdate').textContent = 'Stand ' + new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
 }
 
@@ -637,6 +639,11 @@ $('btnTank').addEventListener('click', async () => {
     sendCmd('tank_full');
   }
 });
+$('btnReset').addEventListener('click', async () => {
+  if (await askConfirm('Reset', 'Alle Tageszähler UND das Bridge-Tageslimit zurücksetzen? (Gedacht für die Testphase.)')) {
+    sendCmd('reset');
+  }
+});
 document.querySelectorAll('.budget-row button').forEach(b => b.addEventListener('click', () => {
   const idx = parseInt(b.dataset.cat, 10);
   const cur = lastData?.cats?.[idx - 1]?.budget ?? 60;
@@ -661,6 +668,7 @@ function MOCK_DATA() {
     thieves: [ { tag:'0A00F1C2D3', ts: now-42*60 } ],
     unknown_today: 1,
     pin_required: false,
+    version: 'v1.3 · Build 8 (Mock)',
     ts: now
   };
 }

@@ -96,6 +96,11 @@
             "onClick": "CFD_TankFilled($id);"
         },
         {
+            "type": "Button",
+            "caption": "🔄 Reset: Zähler + Bridge-Tageslimit (Testphase)",
+            "onClick": "CFD_ResetDay($id);"
+        },
+        {
             "type": "Label",
             "caption": "Dashboard-URL: http://<symcon-ip>:3777/hook/catfeeder<InstanzID>  (für IPSView-HTML-Box / Browser)"
         }
