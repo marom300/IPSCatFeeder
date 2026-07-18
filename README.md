@@ -51,7 +51,7 @@ Tuya-Bridge    --MQTT-->  cats/feeder/device (retained) · bridge (LWT)
 | Parameter | Standard | Wirkung |
 |---|---|---|
 | Dashboard-Titel / Untertitel | Katzenfütterung / RFID · Mikrodosierung | Kopfzeile des Dashboards. |
-| PIN | leer | Wenn gesetzt: Dashboard-Steuerung (Portion, Pause, Tank, Budget) nur mit PIN (Session-gecacht). |
+| PIN | leer | Wenn gesetzt: Dashboard-Steuerung nur mit PIN (Session-gecacht). **Ausnahme: „Portion ausgeben" ist immer PIN-frei** — Füttern ist harmlos (die Limits greifen weiter), während Pause, Tank-Reset, Budget-Änderung und Reset den Betrieb verändern und geschützt bleiben. Ausnahmeliste = `PIN_FREE_CMDS` im Modul, wird ans Dashboard mitgeliefert. |
 | Push-Skript | keines | Wird bei „Futter leer/blockiert" und „Feeder offline" mit `$_IPS['MESSAGE']` aufgerufen — dort z. B. `WFC_PushNotification()` einbauen. Meldungen sind flankengesteuert (kein Spam). |
 
 ## Ablauf-Logik

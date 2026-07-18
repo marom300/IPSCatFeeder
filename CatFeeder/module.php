@@ -30,6 +30,10 @@ class CatFeeder extends IPSModule
     private const MAX_THIEVES = 20;
     private const MANUAL_MAX   = 3;   // max. Portionen pro manueller Ausgabe (Dashboard/Skript)
 
+    // Kommandos ohne PIN-Abfrage: Futter ausgeben ist harmlos (Limits greifen weiter),
+    // waehrend Pause/Tank/Budget/Reset den Betrieb veraendern und geschuetzt bleiben.
+    private const PIN_FREE_CMDS = ['dispense'];
+
     public function Create()
     {
         parent::Create();
@@ -704,13 +708,15 @@ class CatFeeder extends IPSModule
                 echo json_encode(['ok' => false, 'error' => 'BAD']);
                 return;
             }
+            $cmd = (string)($payload['cmd'] ?? '');
+            $val = $payload['value'] ?? null;
+
             $pin = $this->ReadPropertyString('PinCode');
-            if ($pin !== '' && (string)($payload['pin'] ?? '') !== $pin) {
+            if ($pin !== '' && !in_array($cmd, self::PIN_FREE_CMDS, true)
+                && (string)($payload['pin'] ?? '') !== $pin) {
                 echo json_encode(['ok' => false, 'error' => 'PIN']);
                 return;
             }
-            $cmd = (string)($payload['cmd'] ?? '');
-            $val = $payload['value'] ?? null;
             $ok  = true;
             $msg = '';
             try {
@@ -833,6 +839,7 @@ class CatFeeder extends IPSModule
             'thieves'      => $thieves,
             'unknown_today'=> $this->GetValue('UnknownToday'),
             'pin_required' => $this->ReadPropertyString('PinCode') !== '',
+            'pin_free'     => self::PIN_FREE_CMDS,
             'version'      => $this->moduleVersion(),
             'ts'           => time(),
         ];

@@ -589,7 +589,9 @@ function askConfirm(title, text) {
 async function sendCmd(cmd, value, extra) {
   if (MOCK) { toast('Mock: ' + cmd + ' ' + (value ?? '')); return; }
   let pin = '';
-  if (lastData?.pin_required) {
+  // Futterausgabe ist bewusst PIN-frei (Liste kommt vom Modul, damit beide Seiten synchron bleiben)
+  const pinFree = (lastData?.pin_free || ['dispense']).includes(cmd);
+  if (lastData?.pin_required && !pinFree) {
     pin = cachedPin || await askPin();
     if (pin === null || pin === '') return;
   }
@@ -668,7 +670,8 @@ function MOCK_DATA() {
     thieves: [ { tag:'0A00F1C2D3', ts: now-42*60 } ],
     unknown_today: 1,
     pin_required: false,
-    version: 'v1.3 · Build 8 (Mock)',
+    pin_free: ['dispense'],
+    version: 'v1.4 · Build 9 (Mock)',
     ts: now
   };
 }
