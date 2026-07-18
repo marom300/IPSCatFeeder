@@ -501,6 +501,7 @@ function render(d) {
   if (!f.bridge_online)    pill = { t:'Bridge offline', theme:'error' };
   else if (!f.online)      pill = { t:'Feeder offline', theme:'error' };
   else if (f.empty)        pill = { t:'Futter leer?', theme:'error' };
+  else if (f.throttled)    pill = { t:f.throttle_reason ? 'Limit: ' + f.throttle_reason : 'Tageslimit erreicht', theme:'warn' };
   else if (f.paused)       pill = { t:'Pausiert', theme:'warn' };
   else if (f.tank_pct < 15) pill = { t:'Tank fast leer', theme:'warn' };
   $('feederPill').dataset.theme = pill.theme;
@@ -653,8 +654,8 @@ function MOCK_DATA() {
       { name:'Mia',  eaten:32, budget:60, visits:5, last_visit: now-12*60, present:true  },
       { name:'Nala', eaten:56, budget:60, visits:8, last_visit: now-3*60,  present:false }
     ],
-    feeder: { online:true, bridge_online:true, empty:false, paused:false, last_dispense: now-3*60,
-              portions_today:11, grams_today:88, portion_g:8, tank_g:930, tank_pct:62, max_manual:3 },
+    feeder: { online:true, bridge_online:true, empty:false, paused:false, throttled:false, throttle_reason:'',
+              last_dispense: now-3*60, portions_today:11, grams_today:88, portion_g:8, tank_g:930, tank_pct:62, max_manual:3 },
     esp: { online:true, rssi:-58, last_seen: now-30 },
     hourly,
     thieves: [ { tag:'0A00F1C2D3', ts: now-42*60 } ],

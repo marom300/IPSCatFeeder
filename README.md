@@ -71,16 +71,19 @@ Tuya-Bridge    --MQTT-->  cats/feeder/device (retained) · bridge (LWT)
 ## Variablen (automatisch archiviert)
 
 Pro Katze: `am Napf`, `gefressen heute`, `Tagesbudget` (bedienbar), `Besuche heute`,
-`letzter Besuch`. Global: `Fütterung pausiert` (bedienbar), `Portionen/Gesamt heute`,
+`letzter Besuch`. Global: **`Status`** (eine Ampel-Variable: Bereit / Tageslimit erreicht /
+Pausiert / Futter leer / Feeder offline / Bridge offline — grün heißt „alles normal"),
+`Fütterung pausiert` (bedienbar), `Portionen/Gesamt heute`,
 `Letzte Ausgabe`, `Tank-Restmenge`, `Feeder erreichbar`, `Bridge online`,
-`Futter leer (Verdacht)`, `RFID-Reader online/WLAN/zuletzt gesehen`,
+`Futter leer (Verdacht)`, `Ausgabe gedrosselt (Bridge-Limit)` — z. B. Tagesmaximum erreicht,
+`RFID-Reader online/WLAN/zuletzt gesehen`,
 `Letzter fremder Tag`, `Fremde Tags heute`, `Fütterungs-Protokoll` (String-Log).
 
 ## Öffentliche Funktionen
 
 | Funktion | Wirkung |
 |---|---|
-| `CFD_Dispense(int $id, int $Portionen)` | Manuelle Ausgabe (1–3 Portionen), zählt auf kein Katzenbudget. Obergrenze `MANUAL_MAX` (3) im Modul; die Bridge begrenzt zusätzlich hart. |
+| `CFD_Dispense(int $id, int $Portionen)` | Manuelle Ausgabe (1–3 Portionen), zählt auf kein Katzenbudget und **umgeht das Tageslimit der Bridge** (Minutenlimit/Mindestabstand gelten weiter). Obergrenze `MANUAL_MAX` (3) im Modul. |
 | `CFD_TankFilled(int $id)` | Tank-Schätzung auf Kapazität zurücksetzen. |
 
 Im Dashboard öffnet der Button **„Portion …"** einen Auswähler für 1–3 Portionen (8/16/24 g).

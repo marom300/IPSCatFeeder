@@ -59,6 +59,8 @@ class CatFeeder extends IPSModule
         $this->RegisterAttributeString('Thieves', '[]');
         $this->RegisterAttributeBoolean('NotifiedEmpty', false);
         $this->RegisterAttributeBoolean('NotifiedOffline', false);
+        $this->RegisterAttributeBoolean('WasThrottled', false);
+        $this->RegisterAttributeString('ThrottleReason', '');
         $this->RegisterAttributeString('InitializedCats', '[]');
 
         // --- Timer ---
@@ -112,6 +114,8 @@ class CatFeeder extends IPSModule
         $this->WriteAttributeString('InitializedCats', json_encode($init));
 
         // --- globale Statusvariablen ---
+        $this->ensureSystemStateProfile();
+        $this->RegisterVariableInteger('SystemState', 'Status', 'CFD.State', 5);
         $this->RegisterVariableBoolean('Paused', 'Fütterung pausiert', 'CFD.Paused', 10);
         $this->EnableAction('Paused');
         $this->RegisterVariableInteger('PortionsToday', 'Portionen heute', '', 20);
@@ -121,6 +125,7 @@ class CatFeeder extends IPSModule
         $this->RegisterVariableBoolean('FeederOnline', 'Feeder erreichbar', '~Switch', 30);
         $this->RegisterVariableBoolean('BridgeOnline', 'Bridge online', '~Switch', 31);
         $this->RegisterVariableBoolean('SuspectedEmpty', 'Futter leer/blockiert (Verdacht)', '~Alert', 32);
+        $this->RegisterVariableBoolean('Throttled', 'Ausgabe gedrosselt (Bridge-Limit)', '~Alert', 33);
         $this->RegisterVariableBoolean('Esp32Online', 'RFID-Reader online', '~Switch', 40);
         $this->RegisterVariableInteger('Esp32Rssi', 'RFID-Reader WLAN', 'CFD.dbm', 41);
         $this->RegisterVariableInteger('Esp32LastSeen', 'RFID-Reader zuletzt gesehen', '~UnixTimestamp', 42);
@@ -134,6 +139,7 @@ class CatFeeder extends IPSModule
 
         $this->enableArchiving();
         $this->armMidnightTimer();
+        $this->refreshSystemState();
 
         // Dashboard-WebHook registrieren (erst wenn der Kernel bereit ist)
         if (IPS_GetKernelRunlevel() == KR_READY) {
@@ -158,6 +164,7 @@ class CatFeeder extends IPSModule
             if ((bool)$Value) {
                 $this->stopFeeding('Pause');
             }
+            $this->refreshSystemState();
             return;
         }
         if (preg_match('/^Cat(\d+)Budget$/', $Ident, $m)) {
@@ -219,6 +226,7 @@ class CatFeeder extends IPSModule
                 $this->SetValue('BridgeOnline', trim($payload) === 'online');
                 break;
         }
+        $this->refreshSystemState();
         return '';
     }
 
@@ -283,6 +291,11 @@ class CatFeeder extends IPSModule
         }
         if ($this->GetValue('SuspectedEmpty')) {
             if ($arrival) $this->logFeed('⚠ Keine Ausgabe: Futter leer/blockiert (Verdacht)');
+            return;
+        }
+        if ($this->GetValue('Throttled')) {
+            // Bridge wuerde ablehnen — gar nicht erst anfordern (sonst Phantom-Buchung)
+            if ($arrival) $this->logFeed('⚠ Keine Ausgabe: Bridge-Limit aktiv (Tagesmaximum)');
             return;
         }
         if (!$this->GetValue('BridgeOnline') || !$this->GetValue('FeederOnline')) {
@@ -370,8 +383,17 @@ class CatFeeder extends IPSModule
             $this->WriteAttributeBoolean('NotifiedOffline', false);
         }
 
-        if (!empty($j['throttled'])) {
+        // Drossel-Status flankengesteuert (device kommt alle 60 s — sonst Log-Spam)
+        $thr = !empty($j['throttled']);
+        $this->SetValue('Throttled', $thr);
+        if ($thr && !$this->ReadAttributeBoolean('WasThrottled')) {
+            $this->WriteAttributeBoolean('WasThrottled', true);
+            $this->WriteAttributeString('ThrottleReason', (string)($j['throttle_reason'] ?? ''));
             $this->logFeed('⚠ Bridge drosselt: ' . (string)($j['throttle_reason'] ?? ''));
+        } elseif (!$thr && $this->ReadAttributeBoolean('WasThrottled')) {
+            $this->WriteAttributeBoolean('WasThrottled', false);
+            $this->WriteAttributeString('ThrottleReason', '');
+            $this->logFeed('Bridge-Drosselung aufgehoben');
         }
     }
 
@@ -413,7 +435,8 @@ class CatFeeder extends IPSModule
     public function Dispense(int $Portions)
     {
         $p = max(1, min(self::MANUAL_MAX, $Portions));
-        $this->publish($this->ReadPropertyString('BaseTopic') . '/cmd/dispense', json_encode(['portions' => $p]), false);
+        // manual=true: Bridge laesst das Tageslimit aus (Minutenlimit/Abstand bleiben)
+        $this->publish($this->ReadPropertyString('BaseTopic') . '/cmd/dispense', json_encode(['portions' => $p, 'manual' => true]), false);
         $portion = $this->ReadPropertyInteger('PortionGrams') * $p;
         $this->SetValue('GramsToday', $this->GetValue('GramsToday') + $portion);
         $this->SetValue('PortionsToday', $this->GetValue('PortionsToday') + $p);
@@ -525,8 +548,8 @@ class CatFeeder extends IPSModule
         }
         $arch = $archList[0];
 
-        $idents = ['PortionsToday', 'GramsToday', 'TankRemaining', 'UnknownToday',
-                   'FeederOnline', 'BridgeOnline', 'SuspectedEmpty', 'Esp32Online', 'Esp32Rssi',
+        $idents = ['SystemState', 'PortionsToday', 'GramsToday', 'TankRemaining', 'UnknownToday',
+                   'FeederOnline', 'BridgeOnline', 'SuspectedEmpty', 'Throttled', 'Esp32Online', 'Esp32Rssi',
                    'FeedLog'];   // String-Log -> Archiv = lueckenloses Vorgangs-Protokoll
         foreach ($this->catList() as $i => $cat) {
             $n = $i + 1;
@@ -569,6 +592,41 @@ class CatFeeder extends IPSModule
         }
         IPS_SetVariableProfileAssociation($name, 0, 'abwesend', '', 0x808080);
         IPS_SetVariableProfileAssociation($name, 1, 'am Napf', '', 0x00A0FF);
+    }
+
+    private function ensureSystemStateProfile(): void
+    {
+        $name = 'CFD.State';
+        if (!IPS_VariableProfileExists($name)) {
+            IPS_CreateVariableProfile($name, 1);
+        }
+        IPS_SetVariableProfileAssociation($name, 0, 'Bereit', '', 0x00A000);
+        IPS_SetVariableProfileAssociation($name, 1, 'Tageslimit erreicht', '', 0xFFA500);
+        IPS_SetVariableProfileAssociation($name, 2, 'Pausiert', '', 0xFFA500);
+        IPS_SetVariableProfileAssociation($name, 3, 'Futter leer/blockiert', '', 0xFF0000);
+        IPS_SetVariableProfileAssociation($name, 4, 'Feeder offline', '', 0xFF0000);
+        IPS_SetVariableProfileAssociation($name, 5, 'Bridge offline', '', 0xFF0000);
+    }
+
+    /** Zentralen System-Status neu berechnen (Prioritaet: hart vor weich). */
+    private function refreshSystemState(): void
+    {
+        if (!$this->GetValue('BridgeOnline')) {
+            $s = 5;
+        } elseif (!$this->GetValue('FeederOnline')) {
+            $s = 4;
+        } elseif ($this->GetValue('SuspectedEmpty')) {
+            $s = 3;
+        } elseif ($this->GetValue('Paused')) {
+            $s = 2;
+        } elseif ($this->GetValue('Throttled')) {
+            $s = 1;
+        } else {
+            $s = 0;
+        }
+        if ($this->GetValue('SystemState') !== $s) {
+            $this->SetValue('SystemState', $s);
+        }
     }
 
     private function ensurePausedProfile(): void
@@ -736,6 +794,8 @@ class CatFeeder extends IPSModule
                 'grams_today'   => $this->GetValue('GramsToday'),
                 'portion_g'     => $this->ReadPropertyInteger('PortionGrams'),
                 'max_manual'    => self::MANUAL_MAX,
+                'throttled'     => $this->GetValue('Throttled'),
+                'throttle_reason' => $this->ReadAttributeString('ThrottleReason'),
                 'tank_g'        => $this->GetValue('TankRemaining'),
                 'tank_pct'      => (int)round($this->GetValue('TankRemaining') / $cap * 100),
             ],
